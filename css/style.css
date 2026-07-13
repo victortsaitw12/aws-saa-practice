@@ -111,6 +111,47 @@ main#app {
 
 .hidden { display: none !important; }
 
+/* Auth gate */
+#siteContent { display: none; }
+html.auth-ok #siteContent { display: block; }
+html.auth-ok .auth-gate { display: none; }
+
+.auth-gate {
+  display: flex;
+  min-height: 100vh;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  padding-bottom: calc(20px + env(safe-area-inset-bottom));
+}
+.auth-box { max-width: 340px; width: 100%; text-align: center; }
+.auth-box h2 { margin: 0 0 6px; font-size: 1.3rem; }
+.auth-input {
+  width: 100%;
+  padding: 12px 14px;
+  font-size: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin: 16px 0;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 44px;
+}
+.auth-input:focus { outline: none; border-color: var(--primary); }
+.auth-error { color: var(--red); font-size: 0.85rem; margin-top: 14px; }
+
+.logout-btn {
+  background: none;
+  border: none;
+  color: #cbd5e1;
+  cursor: pointer;
+  font-size: 0.82rem;
+  text-decoration: underline;
+  padding: 10px 4px;
+  touch-action: manipulation;
+}
+.logout-btn:hover { color: #fff; }
+
 /* Daily plan card */
 .daily-card { margin-bottom: 20px; border-color: var(--primary); }
 .daily-title { margin: 0 0 6px; font-size: 1.15rem; }

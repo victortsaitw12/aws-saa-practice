@@ -5,6 +5,8 @@
   const BOOKMARK_KEY = "saa_bookmarks_v1";
   const DAILY_KEY = "saa_daily_v1";
   const DAILY_BATCH = 10;
+  const AUTH_KEY = "saa_auth_v1";
+  const AUTH_HASH = "e545931178924da5250a5a34218ab3553302e668ba5378a461da1121bcee314a";
 
   let allQuestions = [];
   let stats = {};       // id -> {attempts, correctCount, lastCorrect}
@@ -23,6 +25,38 @@
     return s.replace(/[&<>"']/g, (c) => ({
       "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
     }[c]));
+  }
+
+  async function sha256Hex(text) {
+    const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
+    return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
+  }
+
+  async function attemptLogin() {
+    const input = $("authInput");
+    const errorEl = $("authError");
+    try {
+      const hash = await sha256Hex(input.value);
+      if (hash === AUTH_HASH) {
+        localStorage.setItem(AUTH_KEY, "1");
+        document.documentElement.classList.add("auth-ok");
+        errorEl.classList.add("hidden");
+      } else {
+        errorEl.textContent = "密碼錯誤，請再試一次";
+        errorEl.classList.remove("hidden");
+        input.value = "";
+        input.focus();
+      }
+    } catch (e) {
+      errorEl.textContent = "此瀏覽器不支援，請更新瀏覽器後再試";
+      errorEl.classList.remove("hidden");
+    }
+  }
+
+  function logout() {
+    localStorage.removeItem(AUTH_KEY);
+    document.documentElement.classList.remove("auth-ok");
+    location.reload();
   }
 
   // ---------- persistence ----------
@@ -435,6 +469,11 @@
 
   // ---------- init ----------
   function attachEvents() {
+    on("authForm", "submit", (e) => {
+      e.preventDefault();
+      attemptLogin();
+    });
+    on("logoutBtn", "click", logout);
     document.querySelectorAll('input[name="mode"]').forEach((el) =>
       el.addEventListener("change", updateModeHint)
     );
