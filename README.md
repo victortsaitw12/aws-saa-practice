@@ -1,13 +1,18 @@
 # AWS SAA-C03 模擬考題練習
 
-一個純前端（HTML/CSS/JS，無需建置）的 AWS Certified Solutions Architect – Associate (SAA-C03) 模擬考題練習網站，題庫共 1019 題，來源為 ExamTopics 公開題庫 PDF。
+一個純前端（HTML/CSS/JS，無需建置）的 AWS Certified Solutions Architect – Associate (SAA-C03) 模擬考題練習網站，題庫共 1018 題，來源為 ExamTopics 公開題庫 PDF。
+
+## 頁面結構
+
+- `index.html` — 首頁，顯示整體練習正確率統計，並連結到每日背題與自由練習
+- `daily.html` — 每日背題計畫：每天自動指派下 10 題，追蹤完成進度、連續天數與歷史紀錄
+- `practice.html` — 自由練習：隨機出題 / 依題號順序 / 只練錯過的題目 / 只練標記的題目 / 只練沒做過的題目，自選題數
 
 ## 功能
 
-- 隨機出題 / 依題號順序 / 只練錯過的題目 / 只練標記的題目 / 只練沒做過的題目
 - 支援單選與多選（Choose two/three）題型
 - 答題後即時顯示正確答案與對錯
-- 練習紀錄（作答次數、正確率、標記星號）儲存在瀏覽器 localStorage，不會上傳到任何伺服器
+- 練習紀錄（作答次數、正確率、標記星號、每日背題進度）儲存在瀏覽器 localStorage，不會上傳到任何伺服器
 - 練習結束顯示成績與答錯題目列表，可一鍵複習答錯題目
 
 ## 本機預覽

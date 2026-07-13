@@ -14,6 +14,10 @@
   let session = null;   // {queue, index, score, missedIds, selected, submitted, isDaily, dayDate}
 
   const $ = (id) => document.getElementById(id);
+  function on(id, event, handler) {
+    const el = $(id);
+    if (el) el.addEventListener(event, handler);
+  }
 
   function escapeHtml(s) {
     return s.replace(/[&<>"']/g, (c) => ({
@@ -84,7 +88,7 @@
   }
 
   function refreshDailyUI() {
-    if (allQuestions.length === 0) return;
+    if (allQuestions.length === 0 || !$("dailyStartBtn")) return;
     const today = todayStr();
     const todayEntry = daily.history.find((h) => h.date === today);
     const totalPool = allQuestions.length;
@@ -135,6 +139,29 @@
     }).join("");
   }
 
+  function renderHomeDailySummary() {
+    if (allQuestions.length === 0 || !$("homeDailyStatus")) return;
+    const today = todayStr();
+    const todayEntry = daily.history.find((h) => h.date === today);
+    const totalPool = allQuestions.length;
+    const assigned = Math.min(daily.pointer, totalPool);
+    $("homeDailyProgressFill").style.width = `${(assigned / totalPool) * 100}%`;
+
+    const streak = computeStreak();
+    $("homeDailyStreak").textContent = streak > 0 ? `🔥 連續 ${streak} 天・已排入 ${assigned}/${totalPool} 題` : `已排入 ${assigned}/${totalPool} 題`;
+
+    if (todayEntry && todayEntry.done) {
+      const correctCount = Object.values(todayEntry.results).filter(Boolean).length;
+      $("homeDailyStatus").textContent = `今天已完成！答對 ${correctCount} / ${todayEntry.ids.length} 題。`;
+    } else if (todayEntry) {
+      $("homeDailyStatus").textContent = `今天的 ${todayEntry.ids.length} 題還沒做完，繼續加油！`;
+    } else if (assigned >= totalPool) {
+      $("homeDailyStatus").textContent = `🎉 題庫全部背完一輪了！`;
+    } else {
+      $("homeDailyStatus").textContent = `今天還沒開始背題。`;
+    }
+  }
+
   function startDailySession() {
     const entry = ensureTodayEntry();
     if (!entry) return;
@@ -168,18 +195,16 @@
 
   function refreshStatsUI() {
     const g = computeGlobalStats();
-    $("statAttempted").textContent = g.attempted;
-    $("statAccuracy").textContent = g.accuracy === null ? "–" : g.accuracy + "%";
-    $("statWrong").textContent = g.wrong;
-    $("statBookmark").textContent = g.bookmarked;
-    $("globalStats").textContent = g.attempted > 0
-      ? `已作答 ${g.attempted} 題・正確率 ${g.accuracy}%`
-      : "";
+    if ($("statAttempted")) $("statAttempted").textContent = g.attempted;
+    if ($("statAccuracy")) $("statAccuracy").textContent = g.accuracy === null ? "–" : g.accuracy + "%";
+    if ($("statWrong")) $("statWrong").textContent = g.wrong;
+    if ($("statBookmark")) $("statBookmark").textContent = g.bookmarked;
     updateModeHint();
   }
 
   function getSelectedMode() {
-    return document.querySelector('input[name="mode"]:checked').value;
+    const el = document.querySelector('input[name="mode"]:checked');
+    return el ? el.value : "random";
   }
   function getSelectedCount() {
     const v = document.querySelector('input[name="count"]:checked').value;
@@ -202,12 +227,9 @@
   }
 
   function updateModeHint() {
+    if (!$("modeHint") || !$("startBtn")) return;
     const mode = getSelectedMode();
     const pool = poolForMode(mode);
-    const labels = {
-      random: "隨機出題", sequential: "依題號順序", wrong: "只練錯過的題目",
-      bookmark: "只練標記的題目", unseen: "只練沒做過的題目"
-    };
     $("modeHint").textContent = `此模式目前可用題目：${pool.length} 題`;
     $("startBtn").disabled = pool.length === 0;
   }
@@ -382,8 +404,7 @@
     }
 
     showScreen("resultScreen");
-    refreshStatsUI();
-    refreshDailyUI();
+    refreshAll();
   }
 
   function toggleBookmark() {
@@ -401,9 +422,15 @@
 
   function showScreen(id) {
     ["startScreen", "quizScreen", "resultScreen"].forEach((s) => {
-      $(s).classList.toggle("hidden", s !== id);
+      if ($(s)) $(s).classList.toggle("hidden", s !== id);
     });
     window.scrollTo(0, 0);
+  }
+
+  function refreshAll() {
+    refreshStatsUI();
+    refreshDailyUI();
+    renderHomeDailySummary();
   }
 
   // ---------- init ----------
@@ -411,43 +438,41 @@
     document.querySelectorAll('input[name="mode"]').forEach((el) =>
       el.addEventListener("change", updateModeHint)
     );
-    $("startBtn").addEventListener("click", () => {
+    on("startBtn", "click", () => {
       const mode = getSelectedMode();
       const count = getSelectedCount();
       const queue = buildQueue(mode, count);
       if (queue.length === 0) return;
       startSession(queue);
     });
-    $("submitBtn").addEventListener("click", submitAnswer);
-    $("nextBtn").addEventListener("click", nextQuestion);
-    $("bookmarkBtn").addEventListener("click", toggleBookmark);
-    $("quitBtn").addEventListener("click", () => {
+    on("submitBtn", "click", submitAnswer);
+    on("nextBtn", "click", nextQuestion);
+    on("bookmarkBtn", "click", toggleBookmark);
+    on("quitBtn", "click", () => {
       showScreen("startScreen");
-      refreshStatsUI();
-      refreshDailyUI();
+      refreshAll();
     });
-    $("backHomeBtn").addEventListener("click", () => {
+    on("backHomeBtn", "click", () => {
       showScreen("startScreen");
-      refreshStatsUI();
-      refreshDailyUI();
+      refreshAll();
     });
-    $("dailyStartBtn").addEventListener("click", startDailySession);
-    $("dailyResetBtn").addEventListener("click", () => {
+    on("dailyStartBtn", "click", startDailySession);
+    on("dailyResetBtn", "click", () => {
       if (!confirm("確定要重設每日背題進度與歷史紀錄嗎？（不會影響練習正確率統計）")) return;
       localStorage.removeItem(DAILY_KEY);
       loadDaily();
       refreshDailyUI();
     });
-    $("dailyHistoryToggle").addEventListener("click", () => {
+    on("dailyHistoryToggle", "click", () => {
       const panel = $("dailyHistoryPanel");
       const nowHidden = panel.classList.toggle("hidden");
       $("dailyHistoryToggle").textContent = nowHidden ? "查看歷史紀錄" : "隱藏歷史紀錄";
     });
-    $("reviewMissedBtn").addEventListener("click", () => {
+    on("reviewMissedBtn", "click", () => {
       const queue = session.missedIds.map((id) => allQuestions.find((x) => x.id === id));
       startSession(queue);
     });
-    $("resetStatsBtn").addEventListener("click", () => {
+    on("resetStatsBtn", "click", () => {
       if (!confirm("確定要清除練習正確率紀錄與標記嗎？（不會影響每日背題進度）此動作無法復原。")) return;
       localStorage.removeItem(STATS_KEY);
       localStorage.removeItem(BOOKMARK_KEY);
@@ -466,11 +491,10 @@
       const res = await fetch("data/questions.json");
       allQuestions = await res.json();
       allQuestions.sort((a, b) => a.id - b.id);
-      $("totalCount").textContent = allQuestions.length;
-      refreshStatsUI();
-      refreshDailyUI();
+      if ($("totalCount")) $("totalCount").textContent = allQuestions.length;
+      refreshAll();
     } catch (err) {
-      $("totalCount").textContent = "載入失敗";
+      if ($("totalCount")) $("totalCount").textContent = "載入失敗";
       console.error(err);
     }
   }
