@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AWS SAA-C03 模擬考題練習</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>☁️</text></svg>" />
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-inner">
+    <span class="brand">☁️ AWS SAA-C03 練習</span>
+    <span id="globalStats" class="global-stats"></span>
+  </div>
+</header>
+
+<main id="app">
+
+  <!-- START SCREEN -->
+  <section id="startScreen" class="screen">
+    <div class="card start-card">
+      <h1>AWS Certified Solutions Architect – Associate<br>模擬考題練習</h1>
+      <p class="subtitle">題庫共 <strong id="totalCount">–</strong> 題，資料來源：ExamTopics SAA-C03</p>
+
+      <div class="field-group">
+        <label>練習模式</label>
+        <div class="radio-row" id="modeSelect">
+          <label class="radio-pill"><input type="radio" name="mode" value="random" checked><span>隨機出題</span></label>
+          <label class="radio-pill"><input type="radio" name="mode" value="sequential"><span>依題號順序</span></label>
+          <label class="radio-pill"><input type="radio" name="mode" value="wrong"><span>只練錯過的題目</span></label>
+          <label class="radio-pill"><input type="radio" name="mode" value="bookmark"><span>只練標記的題目</span></label>
+          <label class="radio-pill"><input type="radio" name="mode" value="unseen"><span>只練沒做過的題目</span></label>
+        </div>
+      </div>
+
+      <div class="field-group" id="countGroup">
+        <label>題數</label>
+        <div class="radio-row" id="countSelect">
+          <label class="radio-pill"><input type="radio" name="count" value="10"><span>10</span></label>
+          <label class="radio-pill"><input type="radio" name="count" value="20" checked><span>20</span></label>
+          <label class="radio-pill"><input type="radio" name="count" value="50"><span>50</span></label>
+          <label class="radio-pill"><input type="radio" name="count" value="65"><span>65（正式考試題數）</span></label>
+          <label class="radio-pill"><input type="radio" name="count" value="all"><span>全部</span></label>
+        </div>
+      </div>
+
+      <button id="startBtn" class="btn btn-primary btn-large">開始練習</button>
+
+      <p id="modeHint" class="hint"></p>
+
+      <div class="stats-panel">
+        <div class="stat-box">
+          <div class="stat-value" id="statAttempted">0</div>
+          <div class="stat-label">已作答題目</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-value" id="statAccuracy">–</div>
+          <div class="stat-label">整體正確率</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-value" id="statWrong">0</div>
+          <div class="stat-label">尚待加強</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-value" id="statBookmark">0</div>
+          <div class="stat-label">已標記</div>
+        </div>
+      </div>
+      <button id="resetStatsBtn" class="btn btn-ghost btn-small">清除所有練習紀錄</button>
+    </div>
+  </section>
+
+  <!-- QUIZ SCREEN -->
+  <section id="quizScreen" class="screen hidden">
+    <div class="quiz-header">
+      <button id="quitBtn" class="btn btn-ghost btn-small">← 結束本次練習</button>
+      <div class="progress-wrap">
+        <div class="progress-bar"><div id="progressFill" class="progress-fill"></div></div>
+        <span id="progressText" class="progress-text"></span>
+      </div>
+      <div class="score-live">得分 <strong id="liveScore">0</strong></div>
+    </div>
+
+    <div class="card question-card">
+      <div class="q-meta">
+        <span class="q-number" id="qNumber"></span>
+        <button id="bookmarkBtn" class="bookmark-btn" title="標記此題">☆</button>
+      </div>
+      <p class="q-text" id="qText"></p>
+      <p class="q-choose-hint" id="qChooseHint"></p>
+      <div id="optionsList" class="options-list"></div>
+
+      <div class="answer-actions">
+        <button id="submitBtn" class="btn btn-primary" disabled>提交答案</button>
+        <button id="nextBtn" class="btn btn-primary hidden">下一題 →</button>
+      </div>
+
+      <div id="feedback" class="feedback hidden"></div>
+    </div>
+  </section>
+
+  <!-- RESULT SCREEN -->
+  <section id="resultScreen" class="screen hidden">
+    <div class="card result-card">
+      <h2>練習結果</h2>
+      <div class="result-score" id="resultScore"></div>
+      <div class="result-bar-wrap"><div id="resultBarFill" class="result-bar-fill"></div></div>
+      <div id="missedList" class="missed-list"></div>
+      <div class="result-actions">
+        <button id="reviewMissedBtn" class="btn btn-primary hidden">複習答錯的題目</button>
+        <button id="backHomeBtn" class="btn btn-ghost">回首頁</button>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="site-footer">
+  題目內容取自 ExamTopics 公開題庫，僅供個人練習使用。
+</footer>
+
+<script src="js/app.js"></script>
+</body>
+</html>
