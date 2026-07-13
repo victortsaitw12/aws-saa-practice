@@ -19,12 +19,33 @@
 
   <!-- START SCREEN -->
   <section id="startScreen" class="screen">
+    <div class="card daily-card">
+      <h2 class="daily-title">📅 每日背題計畫</h2>
+      <p class="daily-status" id="dailyStatus">載入中…</p>
+
+      <div class="progress-bar daily-progress-bar"><div id="dailyProgressFill" class="progress-fill"></div></div>
+      <p class="daily-progress-text" id="dailyProgressText"></p>
+
+      <div class="daily-meta-row">
+        <span id="dailyStreak"></span>
+        <span>
+          <button id="dailyHistoryToggle" class="link-btn">查看歷史紀錄</button>
+          ・
+          <button id="dailyResetBtn" class="link-btn">重設每日進度</button>
+        </span>
+      </div>
+
+      <div id="dailyHistoryPanel" class="daily-history-panel hidden"></div>
+
+      <button id="dailyStartBtn" class="btn btn-primary btn-large">開始今天的10題</button>
+    </div>
+
     <div class="card start-card">
       <h1>AWS Certified Solutions Architect – Associate<br>模擬考題練習</h1>
       <p class="subtitle">題庫共 <strong id="totalCount">–</strong> 題，資料來源：ExamTopics SAA-C03</p>
 
       <div class="field-group">
-        <label>練習模式</label>
+        <label>自由練習模式</label>
         <div class="radio-row" id="modeSelect">
           <label class="radio-pill"><input type="radio" name="mode" value="random" checked><span>隨機出題</span></label>
           <label class="radio-pill"><input type="radio" name="mode" value="sequential"><span>依題號順序</span></label>

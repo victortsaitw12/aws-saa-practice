@@ -3,12 +3,15 @@
 
   const STATS_KEY = "saa_stats_v1";
   const BOOKMARK_KEY = "saa_bookmarks_v1";
+  const DAILY_KEY = "saa_daily_v1";
+  const DAILY_BATCH = 10;
 
   let allQuestions = [];
   let stats = {};       // id -> {attempts, correctCount, lastCorrect}
   let bookmarks = new Set();
+  let daily = { pointer: 0, history: [] }; // history: [{date, ids, results, done}]
 
-  let session = null;   // {queue, index, score, missedIds, selected, submitted}
+  let session = null;   // {queue, index, score, missedIds, selected, submitted, isDaily, dayDate}
 
   const $ = (id) => document.getElementById(id);
 
@@ -32,6 +35,112 @@
   }
   function saveBookmarks() {
     localStorage.setItem(BOOKMARK_KEY, JSON.stringify([...bookmarks]));
+  }
+
+  function loadDaily() {
+    try {
+      const d = JSON.parse(localStorage.getItem(DAILY_KEY));
+      daily = d && typeof d === "object" ? d : { pointer: 0, history: [] };
+    } catch { daily = { pointer: 0, history: [] }; }
+    if (!Array.isArray(daily.history)) daily.history = [];
+    if (typeof daily.pointer !== "number") daily.pointer = 0;
+  }
+  function saveDaily() {
+    localStorage.setItem(DAILY_KEY, JSON.stringify(daily));
+  }
+
+  function todayStr() {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  }
+
+  function ensureTodayEntry() {
+    const today = todayStr();
+    let entry = daily.history.find((h) => h.date === today);
+    if (entry) return entry;
+    if (daily.pointer >= allQuestions.length) daily.pointer = 0; // finished a full round, start over
+    const ids = allQuestions.slice(daily.pointer, daily.pointer + DAILY_BATCH).map((q) => q.id);
+    entry = { date: today, ids, results: {}, done: false };
+    daily.history.push(entry);
+    daily.pointer += ids.length;
+    saveDaily();
+    return entry;
+  }
+
+  function computeStreak() {
+    const doneDates = new Set(daily.history.filter((h) => h.done).map((h) => h.date));
+    if (doneDates.size === 0) return 0;
+    let streak = 0;
+    let cursor = new Date();
+    // if today isn't done yet, start counting from yesterday
+    if (!doneDates.has(todayStr())) cursor.setDate(cursor.getDate() - 1);
+    for (;;) {
+      const key = `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, "0")}-${String(cursor.getDate()).padStart(2, "0")}`;
+      if (!doneDates.has(key)) break;
+      streak += 1;
+      cursor.setDate(cursor.getDate() - 1);
+    }
+    return streak;
+  }
+
+  function refreshDailyUI() {
+    if (allQuestions.length === 0) return;
+    const today = todayStr();
+    const todayEntry = daily.history.find((h) => h.date === today);
+    const totalPool = allQuestions.length;
+    const totalDays = Math.ceil(totalPool / DAILY_BATCH);
+    const dayNumber = todayEntry
+      ? daily.history.findIndex((h) => h.date === today) + 1
+      : daily.history.length + 1;
+
+    const assigned = Math.min(daily.pointer, totalPool);
+    $("dailyProgressFill").style.width = `${(assigned / totalPool) * 100}%`;
+    $("dailyProgressText").textContent = `已排入進度 ${assigned} / ${totalPool} 題（第 ${Math.min(dayNumber, totalDays)} / ${totalDays} 天）`;
+
+    const streak = computeStreak();
+    $("dailyStreak").textContent = streak > 0 ? `🔥 連續 ${streak} 天` : "";
+
+    const startBtn = $("dailyStartBtn");
+    if (todayEntry && todayEntry.done) {
+      const correctCount = Object.values(todayEntry.results).filter(Boolean).length;
+      $("dailyStatus").textContent = `今天已完成！答對 ${correctCount} / ${todayEntry.ids.length} 題。`;
+      startBtn.textContent = "重新複習今天的題目";
+    } else if (todayEntry && !todayEntry.done) {
+      $("dailyStatus").textContent = `今天的 ${todayEntry.ids.length} 題還沒做完，繼續加油！`;
+      startBtn.textContent = "繼續今天的10題";
+    } else if (daily.pointer >= totalPool) {
+      $("dailyStatus").textContent = `🎉 題庫全部 ${totalPool} 題都已排入每日進度！可以重新開始下一輪複習。`;
+      startBtn.textContent = "從頭開始下一輪";
+    } else {
+      $("dailyStatus").textContent = `今天還沒開始，準備好背今天的 10 題了嗎？`;
+      startBtn.textContent = "開始今天的10題";
+    }
+
+    renderDailyHistory();
+  }
+
+  function renderDailyHistory() {
+    const panel = $("dailyHistoryPanel");
+    if (daily.history.length === 0) {
+      panel.innerHTML = `<p style="color:var(--text-dim);font-size:0.85rem;margin:8px 0;">尚無歷史紀錄</p>`;
+      return;
+    }
+    panel.innerHTML = daily.history.slice().reverse().map((h, i) => {
+      const dayNum = daily.history.length - i;
+      const correctCount = Object.values(h.results).filter(Boolean).length;
+      const total = h.ids.length;
+      const scoreClass = h.done && correctCount === total ? "full" : "";
+      const statusText = h.done ? `${correctCount} / ${total}` : "進行中";
+      return `<div class="daily-history-row"><span>第 ${dayNum} 天・${h.date}</span><span class="dh-score ${scoreClass}">${statusText}</span></div>`;
+    }).join("");
+  }
+
+  function startDailySession() {
+    const entry = ensureTodayEntry();
+    if (!entry) return;
+    const queue = entry.ids.map((id) => allQuestions.find((q) => q.id === id)).filter(Boolean);
+    if (queue.length === 0) return;
+    startSession(queue, { isDaily: true, dayDate: entry.date });
   }
 
   function recordAnswer(id, correct) {
@@ -123,8 +232,11 @@
     return shuffled.slice(0, Math.min(count, shuffled.length));
   }
 
-  function startSession(queue) {
-    session = { queue, index: 0, score: 0, missedIds: [], selected: new Set(), submitted: false };
+  function startSession(queue, opts = {}) {
+    session = {
+      queue, index: 0, score: 0, missedIds: [], selected: new Set(), submitted: false,
+      isDaily: !!opts.isDaily, dayDate: opts.dayDate || null,
+    };
     showScreen("quizScreen");
     renderQuestion();
   }
@@ -258,8 +370,20 @@
       $("reviewMissedBtn").classList.add("hidden");
     }
 
+    if (session.isDaily && session.dayDate) {
+      const entry = daily.history.find((h) => h.date === session.dayDate);
+      if (entry) {
+        const results = {};
+        entry.ids.forEach((id) => { results[id] = !session.missedIds.includes(id); });
+        entry.results = results;
+        entry.done = true;
+        saveDaily();
+      }
+    }
+
     showScreen("resultScreen");
     refreshStatsUI();
+    refreshDailyUI();
   }
 
   function toggleBookmark() {
@@ -300,17 +424,31 @@
     $("quitBtn").addEventListener("click", () => {
       showScreen("startScreen");
       refreshStatsUI();
+      refreshDailyUI();
     });
     $("backHomeBtn").addEventListener("click", () => {
       showScreen("startScreen");
       refreshStatsUI();
+      refreshDailyUI();
+    });
+    $("dailyStartBtn").addEventListener("click", startDailySession);
+    $("dailyResetBtn").addEventListener("click", () => {
+      if (!confirm("確定要重設每日背題進度與歷史紀錄嗎？（不會影響練習正確率統計）")) return;
+      localStorage.removeItem(DAILY_KEY);
+      loadDaily();
+      refreshDailyUI();
+    });
+    $("dailyHistoryToggle").addEventListener("click", () => {
+      const panel = $("dailyHistoryPanel");
+      const nowHidden = panel.classList.toggle("hidden");
+      $("dailyHistoryToggle").textContent = nowHidden ? "查看歷史紀錄" : "隱藏歷史紀錄";
     });
     $("reviewMissedBtn").addEventListener("click", () => {
       const queue = session.missedIds.map((id) => allQuestions.find((x) => x.id === id));
       startSession(queue);
     });
     $("resetStatsBtn").addEventListener("click", () => {
-      if (!confirm("確定要清除所有練習紀錄與標記嗎？此動作無法復原。")) return;
+      if (!confirm("確定要清除練習正確率紀錄與標記嗎？（不會影響每日背題進度）此動作無法復原。")) return;
       localStorage.removeItem(STATS_KEY);
       localStorage.removeItem(BOOKMARK_KEY);
       loadStats();
@@ -322,12 +460,15 @@
   async function init() {
     loadStats();
     loadBookmarks();
+    loadDaily();
     attachEvents();
     try {
       const res = await fetch("data/questions.json");
       allQuestions = await res.json();
+      allQuestions.sort((a, b) => a.id - b.id);
       $("totalCount").textContent = allQuestions.length;
       refreshStatsUI();
+      refreshDailyUI();
     } catch (err) {
       $("totalCount").textContent = "載入失敗";
       console.error(err);
