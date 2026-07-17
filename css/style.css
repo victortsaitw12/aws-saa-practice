@@ -399,6 +399,18 @@ html.auth-ok .auth-gate { display: none; }
 .feedback.correct { background: var(--green-bg); color: var(--green); }
 .feedback.incorrect { background: var(--red-bg); color: var(--red); }
 .feedback .fb-detail { font-weight: 400; font-size: 0.85rem; margin-top: 4px; color: var(--text-dim); }
+.feedback .fb-explanation {
+  font-weight: 400;
+  font-size: 0.9rem;
+  line-height: 1.7;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(0, 0, 0, 0.12);
+  color: var(--text);
+}
+@media (prefers-color-scheme: dark) {
+  .feedback .fb-explanation { border-top-color: rgba(255, 255, 255, 0.15); }
+}
 
 /* Result screen */
 .result-card { text-align: center; }

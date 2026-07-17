@@ -9,6 +9,7 @@
   const AUTH_HASH = "e545931178924da5250a5a34218ab3553302e668ba5378a461da1121bcee314a";
 
   let allQuestions = [];
+  let explanations = {}; // id -> explanation text
   let stats = {};       // id -> {attempts, correctCount, lastCorrect}
   let bookmarks = new Set();
   let daily = { pointer: 0, history: [] }; // history: [{date, ids, results, done}]
@@ -388,6 +389,11 @@
       ? "✅ 答對了！"
       : `❌ 答錯了。正確答案：${[...correctSet].sort().join(", ")}`;
 
+    const exp = explanations[q.id];
+    if (exp) {
+      fb.innerHTML += `<div class="fb-explanation">${escapeHtml(exp).replace(/\n/g, "<br>")}</div>`;
+    }
+
     $("submitBtn").classList.add("hidden");
     $("nextBtn").classList.remove("hidden");
     $("nextBtn").textContent = session.index + 1 >= session.queue.length ? "完成 →" : "下一題 →";
@@ -530,6 +536,10 @@
       const res = await fetch("data/questions.json");
       allQuestions = await res.json();
       allQuestions.sort((a, b) => a.id - b.id);
+      try {
+        const expRes = await fetch("data/explanations.json?v=20260717");
+        if (expRes.ok) explanations = await expRes.json();
+      } catch { /* 解析檔尚未提供時照常運作 */ }
       if ($("totalCount")) $("totalCount").textContent = allQuestions.length;
       refreshAll();
     } catch (err) {
